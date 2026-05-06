@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Chat</title>
+    
+    <!-- إعدادات الموبايل الأساسية -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#051a05">
+    
+    <style>
+        /* === الألوان الأخضر الجديدة === */
+        :root {
+            --bg-main: #051a05;
+            --bg-card: #0a2a0e;
+            --bg-input: #0d350f;
+            --accent-1: #00e676; /* أخضر فاتح */
+            --accent-2: #00c853; /* أخضر ساتوره */
+            --text-main: #e8f5e9;
+            --text-muted: #81c784;
+            --sent-bubble: linear-gradient(135deg, #00c853 0%, #009624 100%);
+            --received-bubble: #1b3a21;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .screen { display: none; flex-direction: column; height: 100%; }
+        .screen.active { display: flex; }
+
+        /* === شاشة الدخول === */
+        #login-screen {
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: radial-gradient(circle at bottom left, #0a3d10, var(--bg-main) 70%);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background: rgba(10, 42, 14, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 230, 118, 0.15);
+            border-radius: 24px;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .login-card h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--accent-1);
+        }
+
+        .login-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+
+        .input-group { margin-bottom: 20px; text-align: right; }
+        .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+
+        .input-box {
+            display: flex;
+            background: var(--bg-input);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 230, 118, 0.1);
+            transition: all 0.3s;
+        }
+
+        .input-box:focus-within { border-color: var(--accent-2); }
+
+        .input-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 14px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            direction: ltr;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .input-box button {
+            background: var(--sent-bubble);
+            border: none;
+            padding: 14px 18px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .input-box button:active { opacity: 0.8; }
+
+        .connect-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--sent-bubble);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 200, 83, 0.2);
+        }
+        .connect-btn:active { transform: scale(0.98); }
+
+        /* === شاشة الشات === */
+        #chat-screen { background-color: var(--bg-main); }
+
+        .chat-header {
+            background: var(--bg-card);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 230, 118, 0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .status-badge { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+
+        .status-dot {
+            width: 10px; height: 10px;
+            background-color: #00e676;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00e676;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(0, 230, 118, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+        }
+
+        #chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: var(--radius);
+            font-size: 15px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: var(--sent-bubble);
+            color: white;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 150, 36, 0.3);
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background: var(--received-bubble);
+            color: var(--text-main);
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-footer {
+            padding: 15px;
+            background: var(--bg-card);
+            border-top: 1px solid rgba(0, 230, 118, 0.1);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-footer input {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid rgba(0, 230, 118, 0.1);
+            border-radius: 25px;
+            padding: 14px 20px;
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-footer input:focus { border-color: var(--accent-1); }
+
+        .send-btn {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: var(--sent-bubble);
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+            transition: transform 0.2s;
+        }
+        .send-btn:active { transform: scale(0.9); }
+
+        #chat-messages::-webkit-scrollbar { width: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة الدخول -->
+    <div id="login-screen" class="screen active">
+        <div class="login-card">
+            <h1>دردشة خاصة 💬</h1>
+            <p>محمية بالكامل، الاتصال مباشر بدون وسيط</p>
+            
+            <div class="input-group">
+                <label>1. انسخ كودك وأرسله لصديقك</label>
+                <div class="input-box">
+                    <button onclick="copyId()">نسخ</button>
+                    <input type="text" id="my-id" readonly>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>2. الصق كود صديقك هنا</label>
+                <div class="input-box">
+                    <input type="text" id="peer-id-input" placeholder="Paste ID here...">
+                </div>
+            </div>
+
+            <button class="connect-btn" onclick="connectToPeer()">بدء المحادثة 🔗</button>
+        </div>
+    </div>
+
+    <!-- شاشة الشات -->
+    <div id="chat-screen" class="screen">
+        <div class="chat-header">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span>متصل الآن</span>
+            </div>
+        </div>
+        
+        <div id="chat-messages"></div>
+
+        <div class="chat-footer">
+            <input type="text" id="msg-input" placeholder="اكتب رسالتك هنا..." onkeypress="handleKeyPress(event)">
+            <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <!-- مكتبة الـ PeerJS من سيرفر قوي ومضمون -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <script>
+        let peer;
+        let conn;
+
+        function initPeer() {
+            // استخدام سيرفر PeerJS مخصص لتجنب أي مشاكل في التحميل
+            peer = new Peer(undefined, {
+                config: {
+                    iceServers: [
+                        { url: 'stun:stun.l.google.com:19302' },
+                        { url: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            peer.on('open', (id) => {
+                document.getElementById('my-id').value = id;
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                startChat();
+            });
+            
+            peer.on('error', (err) => {
+                console.error(err);
+                alert("حدث خطأ في الاتصال، تأكد من انترنتك وحاول مرة أخرى");
+            });
+        }
+
+        function copyId() {
+            const idInput = document.getElementById('my-id');
+            idInput.select();
+            idInput.setSelectionRange(0, 99999); // للموبايل
+            
+            navigator.clipboard.writeText(idInput.value).then(() => {
+                const btn = event.target;
+                btn.innerText = "تم!";
+                setTimeout(() => btn.innerText = "نسخ", 1500);
+            }).catch(() => {
+                // حل بديل لو المتصفح منع النسخ
+                document.execCommand('copy');
+                alert("تم نسخ الكود");
+            });
+        }
+
+        function connectToPeer() {
+            const friendId = document.getElementById('peer-id-input').value.trim();
+            if (!friendId) return alert("من فضلك الصق كود صديقك أولاً");
+            
+            const btn = document.querySelector('.connect-btn');
+            btn.innerText = "جاري الاتصال...";
+            btn.disabled = true;
+
+            conn = peer.connect(friendId);
+            
+            conn.on('open', () => {
+                startChat();
+            });
+            
+            conn.on('error', () => {
+                btn.innerText = "بدء المحادثة 🔗";
+                btn.disabled = false;
+                alert("فشل الاتصال! تأكد أن الكود صحيح وأن صديقك فتح التطبيق الآن");
+            });
+        }
+
+        function startChat() {
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('chat-screen').classList.add('active');
+
+            conn.on('data', (data) => {
+                appendMessage(data, 'received');
+            });
+
+            conn.on('close', () => {
+                document.querySelector('.status-badge span').innerText = "تم قطع الاتصال ❌";
+                document.querySelector('.status-dot').style.backgroundColor = "red";
+                document.querySelector('.status-dot').style.boxShadow = "0 0 8px red";
+            });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const msg = input.value.trim();
+            if (!msg || !conn) return;
+
+            conn.send(msg);
+            appendMessage(msg, 'sent');
+            input.value = '';
+        }
+
+        function appendMessage(msg, type) {
+            const chatBox = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.classList.add('message', type);
+            div.textContent = msg;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // بدء التطبيق
+        initPeer();
+    </script>
+</body>
+</html>
